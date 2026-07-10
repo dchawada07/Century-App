@@ -6,6 +6,7 @@ for (const file of files) {
 }
 const html = readFileSync('index.html', 'utf8');
 if (!html.includes('src/main.js')) throw new Error('index.html must load src/main.js');
+if (!html.includes('src/styles.css')) throw new Error('index.html must load src/styles.css');
 const app = readFileSync('src/main.js', 'utf8');
 for (const required of ['TransportOS', 'Create Trip', 'Control Tower', 'Mark Empty/Available', 'Fuel Transactions Stub']) {
   if (!app.includes(required)) throw new Error(`Missing required UI text: ${required}`);
