@@ -89,3 +89,9 @@ h1 { margin: 0.15rem 0 0; font-size: clamp(1.7rem, 4vw, 2.7rem); }
   .grid.two, .grid.three, .phone-layout, .kpi-grid, .kanban { grid-template-columns: 1fr; }
   main { padding: 1rem; }
 }
+.actions { display: flex; flex-wrap: wrap; gap: 0.45rem; margin-top: 0.35rem; }
+.actions button, .row button, .issue button { padding: 0.5rem 0.7rem; font-size: 0.82rem; }
+button.danger { background: #dc2626; box-shadow: 0 8px 20px rgba(220, 38, 38, 0.18); }
+.big { font-size: 1.8rem; line-height: 1; }
+.issue { justify-content: space-between; }
+.issue > div { flex: 1; }
