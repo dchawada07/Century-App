@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="760" viewBox="0 0 1280 760" role="img" aria-label="TransportOS demo app visual preview">
+  <defs>
+    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1"><stop offset="0" stop-color="#eef2f7"/><stop offset=".7" stop-color="#e0f2fe"/></linearGradient>
+    <filter id="shadow"><feDropShadow dx="0" dy="14" stdDeviation="18" flood-color="#0f172a" flood-opacity=".14"/></filter>
+  </defs>
+  <rect width="1280" height="760" fill="url(#bg)"/>
+  <rect x="24" y="24" width="220" height="712" rx="24" fill="#0f172a"/>
+  <text x="56" y="76" fill="#fff" font-family="Arial" font-size="26" font-weight="700">🚚 TransportOS</text>
+  <text x="56" y="106" fill="#cbd5e1" font-family="Arial" font-size="15">Century Cargo demo</text>
+  <g font-family="Arial" font-size="17" fill="#e2e8f0">
+    <rect x="44" y="150" width="180" height="44" rx="12" fill="#23304a"/><text x="64" y="178">📊 Control Tower</text>
+    <text x="64" y="232">📋 Trips</text><text x="64" y="282">🚚 Fleet Masters</text><text x="64" y="332">👤 Driver App</text><text x="64" y="382">⛽ Finance</text><text x="64" y="432">🔧 Maintenance</text>
+  </g>
+  <rect x="48" y="610" width="172" height="86" rx="18" fill="#2b1f18" stroke="#fb923c" stroke-opacity=".5"/>
+  <text x="64" y="642" fill="#fed7aa" font-family="Arial" font-size="14">Localhost Phase 0</text><text x="64" y="666" fill="#fed7aa" font-family="Arial" font-size="14">safe stubs enabled</text>
+  <text x="284" y="72" fill="#f97316" font-family="Arial" font-size="14" font-weight="700">LIVE DEMO WORKSPACE</text>
+  <text x="284" y="112" fill="#0f172a" font-family="Arial" font-size="42" font-weight="800">Control Tower</text>
+  <rect x="988" y="64" width="108" height="40" rx="12" fill="#fff" stroke="#cbd5e1"/><text x="1014" y="90" font-family="Arial" font-size="15" fill="#0f172a">Admin</text>
+  <rect x="1110" y="64" width="120" height="40" rx="12" fill="#fff" stroke="#cbd5e1"/><text x="1138" y="90" font-family="Arial" font-size="15" fill="#0f172a">Delhi</text>
+  <rect x="284" y="136" width="946" height="50" rx="16" fill="#fff7ed" stroke="#fed7aa"/><text x="306" y="167" fill="#9a3412" font-family="Arial" font-size="17" font-weight="700">🔔 Firebase push ready • SMS stub logs in-app</text>
+  <g filter="url(#shadow)" font-family="Arial">
+    <rect x="284" y="216" width="220" height="126" rx="24" fill="#fff"/><text x="310" y="258" fill="#64748b" font-size="16" font-weight="700">Fleet count</text><text x="310" y="314" fill="#0f172a" font-size="54" font-weight="800">4</text><text x="452" y="300" font-size="38">🚚</text>
+    <rect x="526" y="216" width="220" height="126" rx="24" fill="#fff"/><text x="552" y="258" fill="#64748b" font-size="16" font-weight="700">Idle &gt; 4h</text><text x="552" y="314" fill="#0f172a" font-size="54" font-weight="800">1</text><text x="694" y="300" font-size="38">🚗</text>
+    <rect x="768" y="216" width="220" height="126" rx="24" fill="#fff"/><text x="794" y="258" fill="#64748b" font-size="16" font-weight="700">Active alerts</text><text x="794" y="314" fill="#0f172a" font-size="54" font-weight="800">3</text><text x="936" y="300" font-size="38">🔔</text>
+    <rect x="1010" y="216" width="220" height="126" rx="24" fill="#fff"/><text x="1036" y="258" fill="#64748b" font-size="16" font-weight="700">Breakdowns</text><text x="1036" y="314" fill="#0f172a" font-size="54" font-weight="800">1</text><text x="1178" y="300" font-size="38">🔧</text>
+  </g>
+  <g filter="url(#shadow)">
+    <rect x="284" y="376" width="456" height="290" rx="24" fill="#fff"/><text x="310" y="420" fill="#0f172a" font-family="Arial" font-size="22" font-weight="800">Live alert feed</text>
+    <g font-family="Arial" font-size="16" fill="#334155"><rect x="310" y="448" width="404" height="42" rx="14" fill="#f8fafc" stroke="#e2e8f0"/><text x="326" y="475">⚠️ DL 08 QW 1129: Breakdown routed</text><rect x="310" y="504" width="404" height="42" rx="14" fill="#f8fafc" stroke="#e2e8f0"/><text x="326" y="531">⚠️ KA 05 MC 7720: Idle 5.1h alert</text><rect x="310" y="560" width="404" height="42" rx="14" fill="#f8fafc" stroke="#e2e8f0"/><text x="326" y="587">⚠️ TRP-0002: Trip delayed vs ETA</text></g>
+    <rect x="774" y="376" width="456" height="290" rx="24" fill="#fff"/><text x="800" y="420" fill="#0f172a" font-family="Arial" font-size="22" font-weight="800">Branch table</text>
+    <g font-family="Arial" font-size="17"><text x="800" y="466" fill="#64748b" font-weight="700">Branch</text><text x="1040" y="466" fill="#64748b" font-weight="700">Fleet</text><text x="1130" y="466" fill="#64748b" font-weight="700">Available</text><line x1="800" x2="1204" y1="486" y2="486" stroke="#e2e8f0"/><text x="800" y="526" fill="#0f172a">Delhi</text><text x="1058" y="526">2</text><text x="1165" y="526">0</text><line x1="800" x2="1204" y1="546" y2="546" stroke="#e2e8f0"/><text x="800" y="586" fill="#0f172a">Mumbai</text><text x="1058" y="586">1</text><text x="1165" y="586">0</text><line x1="800" x2="1204" y1="606" y2="606" stroke="#e2e8f0"/><text x="800" y="646" fill="#0f172a">Bengaluru</text><text x="1058" y="646">1</text><text x="1165" y="646">1</text></g>
+  </g>
+</svg>
