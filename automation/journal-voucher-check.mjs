@@ -22,7 +22,9 @@ try {
   const userField = page.locator("#username");
   const passField = page.locator("#password");
   if (!await userField.isVisible().catch(() => false)) {
-    await page.getByText("LOGIN", { exact: true }).click().catch(async () => { await page.locator("#modalLogin").click(); });\n    await page.waitForTimeout(300);
+    // Open the central LOGIN control before filling the credential form.
+    await page.locator("#modalOpen").click({ force: true });
+    await userField.waitFor({ state: "visible", timeout: 10000 });
   }
   await userField.fill(username);
   await passField.fill(password);
