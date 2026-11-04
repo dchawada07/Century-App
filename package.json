@@ -1,0 +1,7 @@
+{
+  "name": "century-ccpl-journal-automation",
+  "private": true,
+  "type": "module",
+  "scripts": { "check": "node automation/journal-voucher-check.mjs" },
+  "dependencies": { "playwright": "^1.55.0" }
+}
