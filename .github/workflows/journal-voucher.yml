@@ -1,0 +1,30 @@
+name: Century CCPL Journal Voucher Check
+
+on:
+  schedule:
+    - cron: "29 18 * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Do not save changes"
+        required: false
+        default: true
+        type: boolean
+
+jobs:
+  journal-voucher:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Run reconciliation
+        env:
+          CENTURY_USERNAME: ${{ secrets.CENTURY_USERNAME }}
+          CENTURY_PASSWORD: ${{ secrets.CENTURY_PASSWORD }}
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run || 'true' }}
+        run: node automation/journal-voucher-check.mjs
