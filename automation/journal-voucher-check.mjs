@@ -22,7 +22,7 @@ try {
   const userField = page.locator("#username");
   const passField = page.locator("#password");
   if (!await userField.isVisible().catch(() => false)) {
-    await page.locator("#modalLogin").click().catch(() => {});
+    await page.getByText("LOGIN", { exact: true }).click().catch(async () => { await page.locator("#modalLogin").click(); });\n    await page.waitForTimeout(300);
   }
   await userField.fill(username);
   await passField.fill(password);
