@@ -1,8 +1,6 @@
 name: Century CCPL Journal Voucher Check
 
 on:
-  schedule:
-    - cron: "29 18 * * *"
   workflow_dispatch:
     inputs:
       dry_run:
@@ -10,6 +8,8 @@ on:
         required: false
         default: true
         type: boolean
+  schedule:
+    - cron: "29 18 * * *"
 
 jobs:
   journal-voucher:
@@ -20,7 +20,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npm ci
+      - run: npm install
       - run: npx playwright install --with-deps chromium
       - name: Run reconciliation
         env:
