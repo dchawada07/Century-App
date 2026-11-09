@@ -5,6 +5,7 @@ const loginUrl = origin + '/cpanel/Default.aspx';
 const listUrl = origin + '/cpanel/ListJournalVoucher.aspx';
 let stage = 'secrets';
 let browser;
+let partialCounts=null;
 const diagnostics = { blockedRequests: 0, blockedNavigation: 0, loginHttpStatus: null, loginRequestFailed: false, alertShown: false };
 try {
   const username = process.env.CENTURY_USERNAME;
@@ -130,10 +131,13 @@ try {
     throw new Error();
   }
   stage='scan';
+  let firstPass=null;
+  for(let pass=1;pass<=2;pass++){
   const seen=new Map(), pages=new Set();
   const exceptions=[]; // Memory only: never print or upload voucher-level records.
   let counts={pages:0,uniqueRows:0,eligibleUsers:0,excludedUsers:0,targetDayRows:0,targetDayMismatches:0,
     targetDayMatches:0,malformedRows:0,invalidEligibleDates:0,allTimeMismatches:0,duplicateRows:0};
+  partialCounts=counts;
   let current=await stable(1);
   const firstSignature=signature(current);
   for(let number=1;number<=1000;number++){
@@ -145,6 +149,7 @@ try {
       seen.set(row.voucher,JSON.stringify(row));counts.uniqueRows++;
       const parts=row.userCell.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
       const user=parts[0]||'';
+      if(!user){counts.malformedRows++;continue;}
       if(user!=='RAJP'&&user!=='MAHBUB'){counts.excludedUsers++;continue;}
       counts.eligibleUsers++;
       const userDate=strictDate(parts[1]||''),voucherDate=strictDate(row.date);
@@ -155,7 +160,7 @@ try {
       if(userDate===voucherDate)counts.targetDayMatches++;
       else {counts.targetDayMismatches++;exceptions.push({kind:'DATE_MISMATCH',voucher:row.voucher,user,userDate,voucherDate});}
     }
-    if(number%25===0)console.log('Progress aggregate: '+JSON.stringify({pages:counts.pages,uniqueRows:counts.uniqueRows}));
+    if(number%25===0)console.log('Progress aggregate: '+JSON.stringify({pass,pages:counts.pages,uniqueRows:counts.uniqueRows}));
     const exact=current.pager.find(p=>p.text===String(number+1)&&p.enabled);
     const forward=current.pager.find(p=>p.text==='>>');
     if(!exact&&forward&&!forward.enabled){
@@ -173,8 +178,11 @@ try {
       const first=await stable(1);
       if(signature(first)!==firstSignature)throw new Error();
       if(counts.malformedRows||counts.invalidEligibleDates||counts.duplicateRows)throw new Error();
+      const snapshot=JSON.stringify([...seen.entries()].sort((a,b)=>a[0].localeCompare(b[0])));
+      if(pass===1){firstPass=snapshot;console.log('First all-page pass complete; independently repeating full scan.');break;}
+      if(snapshot!==firstPass){stage='cross-pass-instability';throw new Error();}
       console.log('AUDIT_SUMMARY '+JSON.stringify({mode:'READ_ONLY',scope:'ALL available dates and branches',targetUsernameDate:target,
-        dateTimezone:'Asia/Kolkata',coverage:'all pages to disabled terminal next; per-page double-read; first boundary unchanged',
+        dateTimezone:'Asia/Kolkata',coverage:'two identical full all-time passes; disabled terminal next; per-page double-read; first boundary unchanged',
         ...counts,catchUp:'All-time mismatch count informational only; no repair authority expanded',
         saveAvailability:'NOT_ASSESSED',detailReport:'Withheld from public logs; aggregate-only test'}));
       console.log('Result: PASS. Audit complete; zero voucher edit pages opened; zero records changed.');
@@ -184,15 +192,23 @@ try {
     const next=exact||(forward?.enabled?forward:null);
     if(!next)throw new Error();
     stage='pagination';
-    await Promise.all([
-      page.waitForResponse(r=>r.url().split('?')[0]===listUrl&&r.request().method()==='POST',{timeout:60000}),
-      page.locator('#'+next.id).click()
-    ]);
+    await page.locator('#'+next.id).click();
     await page.waitForLoadState('domcontentloaded');
-    current=await stable(number+1);
+    try { current=await stable(number+1); }
+    catch {
+      const fresh=await read();
+      if(fresh.active!==number)throw new Error();
+      const retry=fresh.pager.find(p=>p.text===String(number+1)&&p.enabled)||fresh.pager.find(p=>p.text==='>>'&&p.enabled);
+      if(!retry)throw new Error();
+      await page.locator('#'+retry.id).click();
+      await page.waitForLoadState('domcontentloaded');
+      current=await stable(number+1);
+    }
     stage='scan';
   }
+  }
 } catch {
+  if(partialCounts)console.log('INCOMPLETE_AUDIT_AGGREGATES '+JSON.stringify(partialCounts));
   console.log('Non-sensitive diagnostics: ' + JSON.stringify(diagnostics));
   console.log('Result: FAIL at stage ' + stage + '. No record changes attempted.');
   process.exitCode = 1;
