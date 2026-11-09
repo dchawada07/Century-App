@@ -31,7 +31,6 @@ try {
   await page.locator("#modalLogin").click();
   await page.waitForURL(url => !url.toString().includes("Default.aspx"), { timeout: 15000 }).catch(async () => {
     const visibleText = await page.locator("body").innerText().catch(() => "");
-    await page.screenshot({ path: "century-login-failure.png", fullPage: true }).catch(() => {});
     throw new Error("Century CCPL login did not complete. Visible page text: " + visibleText.slice(0, 1000));
   });
   if (page.url().includes("Default.aspx")) throw new Error("Century CCPL login did not complete");
