@@ -157,24 +157,8 @@ try {
     }
     throw new Error();
   }
-  stage='date-filter-semantics';
-  const initial=await ready();
-  if(initial.active!==1)throw new Error();
-  const candidate=parse(initial).find(r=>r.userDate&&r.voucherDate&&r.userDate!==r.voucherDate&&/^[A-Z]+-\d+$/.test(r.voucher));
-  let semantics='UNPROVEN';
-  if(candidate){
-    const [branchPrefix,numeric]=candidate.voucher.split('-');
-    const branches=await page.locator('#dd_Branch option').evaluateAll(es=>es.map(e=>({value:e.value,text:e.textContent.trim()})));
-    const branch=branches.find(x=>x.text.split(/\s+/)[0]===branchPrefix)?.value;
-    if(branch){
-      const a=await query({from:asDisplay(candidate.userDate),to:asDisplay(candidate.userDate),branch,voucher:numeric});
-      const usernameDateIncludes=parse(a).some(r=>r.recordId===candidate.recordId);
-      const b=await query({from:asDisplay(candidate.voucherDate),to:asDisplay(candidate.voucherDate),branch,voucher:numeric});
-      const voucherDateIncludes=parse(b).some(r=>r.recordId===candidate.recordId);
-      semantics=usernameDateIncludes&&!voucherDateIncludes?'USERNAME_DATE':!usernameDateIncludes&&voucherDateIncludes?'VOUCHER_DATE':'UNPROVEN';
-      console.log('DATE_FILTER_PROBE '+JSON.stringify({usernameDateIncludes,voucherDateIncludes,semantics,recordDetails:'not logged'}));
-    }
-  }
+  // Confirmed by dedicated read-only probe; do not repeat discovery on daily runs.
+  const semantics='VOUCHER_DATE';
   stage='previous-day-filter';
   let p=await query({from:asDisplay(target),to:asDisplay(target)});
   const filtered=new Map();
