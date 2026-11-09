@@ -9,10 +9,10 @@ function fixture(change={}) {
  const form=()=>({url:'https://centuryccpl.in/cpanel/AddJournalVoucher.aspx?Id=101',recordId:'101',
  voucher:'TEST-1',branch:'TEST',date:state.pending?'2026-11-08':'2026-11-05',
  dateVisible:true,dateEnabled:true,saveCount:1,saveVisible:true,saveEnabled:true,
- nonDateFields:{voucher:'TEST-1',amount:'123',narration:'fixture'},...change.form});
+ nonDateFields:{voucher:'TEST-1',branch:'TEST',ledgerLines:JSON.stringify([{ledger:'fixture',debit:'123',credit:'0',narration:'fixture',subledger:''}])},...change.form});
  let reads=0;
  const adapter={
-  readRow:async()=>{reads++;return {...row,...(reads===2?change.secondRow:{})};},
+  readRow:async()=>{reads++;return {...row,...(reads===1?change.firstRow:reads===2?change.secondRow:change.commitRow)};},
   openForm:async()=>form(), fillDate:async d=>{assert.equal(d,'2026-11-08');state.fills++;state.pending=true;},
   inspectForm:async()=>({...form(),...change.pending}),
   reserveIntent:async()=>{state.intents++;return change.reserve!==false;},
@@ -40,7 +40,7 @@ for(const user of ['VISHAL','rajp','RAJPX',''])await check('excluded '+user,{row
 await check('wrong creation day',{row:{userDate:'2026-11-07'}},'BLOCKED_CANDIDATE');
 await check('invalid date',{row:{voucherDate:'2026-02-30'}},'BLOCKED_CANDIDATE');
 await check('today prohibited',{target:'2026-11-09'},'BLOCKED_TARGET');
-await check('already correct',{row:{voucherDate:'2026-11-08'}},'ALREADY_CORRECT');
+await check('already correct',{row:{voucherDate:'2026-11-08'}},'VERIFIED_ALREADY_CORRECT');
 for(const c of [{complete:false},{monotone:false},{crossCheckComplete:false},{pages:11},{scope:'ALL_HISTORY'}])
  await check('coverage', {coverage:c},'BLOCKED_COVERAGE');
 for(const k of ['recordId','voucher','branch','user','userDate','voucherDate'])
@@ -67,3 +67,10 @@ await check('other persisted change',{backFields:{amount:'999'}},'UNKNOWN_SAVE_O
 assert.equal(indiaPreviousDay(new Date('2026-11-08T18:29:59Z')),'2026-11-07');count++;
 assert.equal(indiaPreviousDay(new Date('2026-11-08T18:30:00Z')),'2026-11-08');count++;
 console.log('Mock tests passed: '+count+'. No network, credentials, ERP writes, or schedules.');
+
+await check('missing page count',{coverage:{pages:undefined}},'BLOCKED_COVERAGE');
+await check('fractional page count',{coverage:{pages:1.5}},'BLOCKED_COVERAGE');
+await check('empty fields',{form:{nonDateFields:{}}},'BLOCKED_FORM');
+await check('stale no-op',{row:{voucherDate:'2026-11-08'},firstRow:{voucherDate:'2026-11-05'}},'CHANGED_SINCE_SCAN');
+await check('last row changed',{commitRow:{user:'VISHAL'}},'CHANGED_BEFORE_SAVE');
+console.log('Total mock tests passed: '+count);
