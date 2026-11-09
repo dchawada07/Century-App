@@ -51,7 +51,7 @@ try {
   await page.waitForURL(url => url.origin === origin && url.pathname !== '/cpanel/Default.aspx', { timeout: 30000 });
   stage = 'signed-in-verification';
   // Positive signed-in evidence, not merely a changed URL.
-  await page.getByText(/Welcome\s+DEVEN/i).first().waitFor({ state: 'visible', timeout: 15000 });
+  await page.getByRole('link', { name: /logout/i }).first().waitFor({ state: 'visible', timeout: 15000 });
   console.log('Authentication: verified.');
   stage = 'list';
   await page.goto(listUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
