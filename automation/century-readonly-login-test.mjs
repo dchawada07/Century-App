@@ -49,16 +49,14 @@ try {
   await page.locator('#modalLogin').click();
   stage = 'login-redirect';
   await page.waitForURL(url => url.origin === origin && url.pathname !== '/cpanel/Default.aspx', { timeout: 30000 });
-  stage = 'signed-in-verification';
-  // Positive signed-in evidence, not merely a changed URL.
-  await page.getByRole('link', { name: /logout/i }).first().waitFor({ state: 'visible', timeout: 15000 });
-  console.log('Authentication: verified.');
+  // Verify authentication on the protected journal list, not dashboard widgets.
   stage = 'list';
   await page.goto(listUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
   await page.locator('#gv_Cashbook').waitFor({ state: 'visible', timeout: 30000 });
   const rowCount = await page.locator('#gv_Cashbook tr').count();
   if (rowCount < 2) throw new Error();
   // Aggregate only. No voucher identifiers, amounts, dates, HTML, screenshots or logs.
+  console.log('Authentication: verified by protected Journal Voucher table.');
   console.log('Journal Voucher list: readable.');
   console.log('Result: PASS. No voucher edit pages opened; no records changed.');
 } catch {
