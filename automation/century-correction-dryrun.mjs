@@ -100,7 +100,9 @@ try {
 
   const target=previousDay();
   const asDisplay=iso=>iso.slice(8,10)+'/'+iso.slice(5,7)+'/'+iso.slice(0,4);
+  let expectedFilters=null;
   function parse(p){
+    if(!p.rows||p.rows.some(r=>r.columns!==11))throw new Error();
     if((p.rows||[]).some(r=>r.columns===11&&!/^\d+$/.test(r.recordId)))throw new Error();
     return (p.rows||[]).filter(r=>r.columns===11&&/^\d+$/.test(r.recordId)).map(r=>{
       const parts=r.userCell.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
@@ -112,7 +114,8 @@ try {
     for(let n=0;n<20;n++){
       if(!page.url().split('?')[0].endsWith('/cpanel/ListJournalVoucher.aspx'))throw new Error();
       const p=await read();
-      if(!p.filters.period)throw new Error();
+      if(!p.filters.period||!p.rows||p.headers[1]!=='Voucher No.'||p.headers[5]!=='Date&Time'||p.headers[7]!=='User Name')throw new Error();
+      if(expectedFilters&&JSON.stringify(p.filters)!==JSON.stringify(expectedFilters))throw new Error();
       const sig=JSON.stringify({rows:p.rows,active:p.active,filters:p.filters});
       if(sig===prior)return p;
       prior=sig;await page.waitForTimeout(300);
@@ -120,6 +123,7 @@ try {
     throw new Error();
   }
   async function query({from,to,branch='0',voucher=''}){
+    expectedFilters=null;
     await page.goto(listUrl,{waitUntil:'domcontentloaded',timeout:60000});
     await page.locator('#ddl_month').selectOption('3');
     await page.waitForLoadState('domcontentloaded');
@@ -136,6 +140,8 @@ try {
     await response.finished();await page.waitForLoadState('domcontentloaded');
     const p=await ready();
     if(p.filters.from!==from||p.filters.to!==to||p.filters.branch!==branch||p.filters.voucher!==voucher){console.log('FILTER_VALIDATION '+JSON.stringify({fromMatches:p.filters.from===from,toMatches:p.filters.to===to,branchMatches:p.filters.branch===branch,voucherMatches:p.filters.voucher===voucher}));throw new Error();}
+    if(p.active!==1||p.filters.period!=='3'||p.filters.ledger)throw new Error();
+    expectedFilters=p.filters;
     return p;
   }
   async function next(p,number){
@@ -153,6 +159,7 @@ try {
   }
   stage='date-filter-semantics';
   const initial=await ready();
+  if(initial.active!==1)throw new Error();
   const candidate=parse(initial).find(r=>r.userDate&&r.voucherDate&&r.userDate!==r.voucherDate&&/^[A-Z]+-\d+$/.test(r.voucher));
   let semantics='UNPROVEN';
   if(candidate){
@@ -208,12 +215,14 @@ try {
     p=await next(p,n);if(!p)throw new Error();
   }
   const recentTarget=[...recent.values()].filter(r=>(r.user==='RAJP'||r.user==='MAHBUB')&&r.userDate===target);
+  const filteredOnly=filteredTarget.filter(r=>!recent.has(r.recordId));
+  for(const r of filteredTarget){if(recent.has(r.recordId)&&JSON.stringify(recent.get(r.recordId))!==JSON.stringify(r))throw new Error();}
   const missing=recentTarget.filter(r=>!filtered.has(r.recordId));
   console.log('BOUNDED_RECENT_SUMMARY '+JSON.stringify({recentPages,rows:recent.size,olderBoundaryObserved:boundary,
     authoritativeDatesMonotoneInObservedRows:monotone,targetDayRows:recentTarget.length,
-    mismatches:recentTarget.filter(r=>r.voucherDate!==r.userDate).length,targetDayRowsMissingFromDateFilter:missing.length,
+    mismatches:recentTarget.filter(r=>r.voucherDate!==r.userDate).length,targetDayRowsMissingFromDateFilter:missing.length,filteredTargetRowsMissingFromRecent:filteredOnly.length,
     scope:'At most 10 recent pages, stops after two complete older pages; no all-history scan'}));
-  if(!boundary||!monotone||!filterComplete){stage='daily-coverage-incomplete';throw new Error();}
+  if(!boundary||!monotone||!filterComplete||filteredOnly.length){stage='daily-coverage-incomplete';throw new Error();}
 
   stage='correction-plan';
   const dailyCandidates=recentTarget.filter(r=>r.voucherDate!==r.userDate);
@@ -227,14 +236,16 @@ try {
     const form=await context.newPage();
     try{
       await form.goto(url.href,{waitUntil:'domcontentloaded',timeout:60000});
-      if(new URL(form.url()).pathname!=='/cpanel/AddJournalVoucher.aspx')return 'UNVERIFIABLE';
+      const finalUrl=new URL(form.url());
+      const finalId=[...finalUrl.searchParams].find(([key])=>key.toLowerCase()==='id');
+      if(finalUrl.origin!==origin||finalUrl.pathname!=='/cpanel/AddJournalVoucher.aspx'||finalId?.[1].trim()!==row.recordId)return 'UNVERIFIABLE';
       const date=form.locator('#tb_date');
       if(await date.count()!==1||!await date.isVisible()||!await date.isEnabled())return 'UNVERIFIABLE';
       const value=await date.inputValue();
       const displayed=strictDate(value);
       if(displayed!==row.voucherDate)return 'CHANGED';
-      const save=await form.locator('input[type="submit"],input[type="button"],button').evaluateAll(es=>es.some(e=>
-        /save/i.test(e.value||e.innerText||'')&&!e.disabled&&!!(e.offsetWidth||e.offsetHeight||e.getClientRects().length)));
+      const save=await form.locator('input[type="submit"],input[type="button"],button').evaluateAll(es=>es.filter(e=>
+        /^save$/i.test((e.value||e.innerText||'').trim())&&!e.disabled&&!!(e.offsetWidth||e.offsetHeight||e.getClientRects().length)).length===1);
       return save?'READY':'NO_SAVE';
     }finally{await form.close();}
   }
@@ -257,7 +268,7 @@ try {
     hardLimits:'No date fill, no voucher POST, no Save call, no schedule',
     detailedExceptions:'Not written to public logs or artifacts'}));
   if(planCounts.changedSinceScan||planCounts.unverifiable){stage='candidate-verification-incomplete';throw new Error();}
-  console.log('Result: DRY_RUN_PLAN_COMPLETE. Zero voucher fields changed; zero Saves; no schedule.');
+  console.log('Result: BOUNDED_DRY_RUN_COMPLETE_NOT_GLOBAL_COVERAGE. Zero voucher fields changed; zero Saves; no schedule.');
 
  } catch (err) {
   const errorText=String(err?.message||'');
