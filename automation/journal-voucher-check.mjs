@@ -13,8 +13,8 @@ const parts = new Intl.DateTimeFormat("en-GB", {
 }).formatToParts(new Date()).reduce((a, p) => (a[p.type] = p.value, a), {});
 const runDate = `${parts.day}/${parts.month}/${parts.year}`;
 const log = [];
-const browser = await chromium.launch({ headless: true });
-const context = await browser.newContext();
+const browser = await chromium.launch({ headless: false });
+const context = await browser.newContext({\n  userAgent: "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",\n  viewport: { width: 1365, height: 900 },\n  locale: "en-IN",\n});
 const page = await context.newPage();
 
 try {
@@ -28,12 +28,12 @@ try {
   }
   await userField.fill(username);
   await passField.fill(password);
-  await page.locator("#modalLogin").click();
+  await page.locator("#modalLogin").click({ force: true });\n  await page.waitForTimeout(1500);
   await page.waitForURL(url => !url.toString().includes("Default.aspx"), { timeout: 15000 }).catch(async () => {
     const visibleText = await page.locator("body").innerText().catch(() => "");
     throw new Error("Century CCPL login did not complete. Visible page text: " + visibleText.slice(0, 1000));
   });
-  if (page.url().includes("Default.aspx")) throw new Error("Century CCPL login did not complete");
+  if (page.url().includes("Default.aspx")) {\n    const state = await page.locator("body").innerText().catch(() => "");\n    throw new Error("Century CCPL login did not complete. URL=" + page.url() + " title=" + await page.title() + " text=" + state.slice(0, 1000));\n  }
 
   await page.goto(LIST, { waitUntil: "domcontentloaded" });
   await page.locator("#tb_FromDate").fill(runDate);
