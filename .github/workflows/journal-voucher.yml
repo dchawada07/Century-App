@@ -29,7 +29,7 @@ jobs:
           DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run || 'true' }}
         run: |
           set -o pipefail
-          node automation/journal-voucher-check.mjs 2>&1 | tee journal-voucher-run.log
+          xvfb-run --auto-servernum --server-args="-screen 0 1365x900x24" node automation/journal-voucher-check.mjs 2>&1 | tee journal-voucher-run.log
       - name: Create redacted summary
         if: always()
         shell: bash
