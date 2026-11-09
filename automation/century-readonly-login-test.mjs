@@ -27,7 +27,7 @@ try {
     if (req.isNavigationRequest() && !safeDocuments.has(u.pathname)) return route.abort();
     if (method !== 'GET' && method !== 'HEAD') {
       // Only the site's verified username/password login submission is permitted.
-      if (!(method === 'POST' && u.pathname === '/cpanel/Default.aspx')) return route.abort();
+      if (!(method === 'POST' && ['/cpanel/Default.aspx', '/cpanel/Default.aspx/GetLoginMode', '/cpanel/Default.aspx/RedirectUsingCookis', '/cpanel/Default.aspx/LoginUser'].includes(u.pathname))) return route.abort();
     }
     return route.continue();
   });
