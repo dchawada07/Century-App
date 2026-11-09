@@ -19,6 +19,7 @@ try {
     const req = route.request();
     let u;
     try { u = new URL(req.url()); } catch { return route.abort(); }
+    if (req.method() === 'GET' && req.url() === 'https://code.jquery.com/jquery-3.6.0.min.js') return route.continue();
     if (u.origin !== origin) { diagnostics.blockedRequests++; return route.abort(); }
     const method = req.method();
     const safeDocuments = new Set([
