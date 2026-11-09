@@ -62,7 +62,8 @@ export function createCenturyAdapter({context,readFreshRow,store,transport,accou
   inspectForm:async()=>{const p=await snapshot();if(!p.identityValid)throw Error('IDENTITY');return p;},
   reserveIntent:async data=>{
    if(!enableWrites)return false;
-   intent=await store.reserve({account,...data});
+   const token=await store.reserve({account,...data});
+   intent=token?{token,confirmed:true,accountId:account,recordId:data.recordId,targetDate:data.target,reservationId:token.key}:null;
    return !!intent;
   },
   saveOnce:async()=>{
@@ -72,9 +73,11 @@ export function createCenturyAdapter({context,readFreshRow,store,transport,accou
      !pending.saveName||!pending.payload||pending.date!==target)throw Error('SAVE_PREFLIGHT');
    if(JSON.stringify(before.nonDateFields)!==JSON.stringify(pending.nonDateFields))throw Error('FIELD_CHANGE');
    // arm() independently validates exact payload and consumes its permit once.
-   await transport.arm({url:pending.url,recordId:row.recordId,beforePayload:before.payload,
-    pendingPayload:pending.payload,dateName:'tb_date',dateValue:display(target),
-    submitName:pending.saveName,submitValue:pending.saveValue,durableIntent:intent});
+   await transport.arm({formUrl:pending.url,recordId:row.recordId,snapshotComplete:true,
+    beforeFields:before.payload.filter(([k])=>k!==pending.saveName),
+    afterFields:pending.payload.filter(([k])=>k!==pending.saveName),
+    dateField:{name:'tb_date',before:display(row.voucherDate),after:display(target),targetIso:target},
+    submit:{inspected:true,name:pending.saveName,value:pending.saveValue},durableIntent:intent});
    await page.getByRole('button',{name:'Save',exact:true}).click();
   },
   readBack:async id=>{
@@ -83,7 +86,7 @@ export function createCenturyAdapter({context,readFreshRow,store,transport,accou
    const after=await snapshot();if(!after.identityValid)throw Error('IDENTITY');
    return {row:reread,formDate:after.date,nonDateFields:after.nonDateFields};
   },
-  recordOutcome:async status=>{if(!intent)throw Error('NO_INTENT');await store.finish(intent,status);},
+  recordOutcome:async status=>{if(!intent)throw Error('NO_INTENT');await store.finish(intent.token,status);},
   closeWithoutSave:async()=>{if(closed)return;closed=true;await transport.disarm();if(page)await page.close();}
  };
 }
