@@ -3,7 +3,7 @@ import { chromium } from "playwright";
 const BASE = "https://centuryccpl.in";
 const LIST = BASE + "/cpanel/ListJournalVoucher.aspx";
 const dryRun = String(process.env.DRY_RUN ?? "true").toLowerCase() !== "false";
-const username = process.env.CENTURY_USERNAME;
+const username = String(process.env.CENTURY_USERNAME ?? "").trim();
 const password = process.env.CENTURY_PASSWORD;
 if (!username || !password) throw new Error("Missing CENTURY_USERNAME or CENTURY_PASSWORD GitHub Secret");
 
@@ -29,7 +29,11 @@ try {
   await userField.fill(username);
   await passField.fill(password);
   await page.locator("#modalLogin").click();
-  await page.waitForTimeout(1500);
+  await page.waitForURL(url => !url.toString().includes("Default.aspx"), { timeout: 15000 }).catch(async () => {
+    const visibleText = await page.locator("body").innerText().catch(() => "");
+    await page.screenshot({ path: "century-login-failure.png", fullPage: true }).catch(() => {});
+    throw new Error("Century CCPL login did not complete. Visible page text: " + visibleText.slice(0, 1000));
+  });
   if (page.url().includes("Default.aspx")) throw new Error("Century CCPL login did not complete");
 
   await page.goto(LIST, { waitUntil: "domcontentloaded" });
