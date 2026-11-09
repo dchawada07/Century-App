@@ -54,8 +54,7 @@ try {
   while (safety++ < 100) {
     const rows = await page.locator("#gv_Cashbook tr").evaluateAll(trs => trs.slice(1).map(tr => {
       const c = [...tr.querySelectorAll("td")].map(x => x.innerText.trim());
-      const u = (c[7] || "").split(/\
-/).map(x => x.trim()).filter(Boolean);
+      const u = (c[7] || "").split(String.fromCharCode(10)).map(x => x.trim()).filter(Boolean);
       return { voucher: c[1], voucherDate: c[5], user: u[0] || "", userDate: u[1] || "", href: tr.querySelector('a[title="Edit"],a[href*="AddJournalVoucher"]')?.href || "" };
     }).filter(x => x.voucher));
 
