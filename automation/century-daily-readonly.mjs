@@ -122,7 +122,7 @@ try {
     await page.goto(listUrl,{waitUntil:'domcontentloaded',timeout:60000});
     await page.locator('#ddl_month').selectOption('3');
     await page.waitForLoadState('domcontentloaded');
-    if(branch!=='0'){await page.locator('#dd_Branch').selectOption(branch);await page.waitForLoadState('domcontentloaded');}
+    await page.locator('#dd_Branch').selectOption(branch);await page.waitForLoadState('domcontentloaded');
     await page.locator('#tb_VoucherNo').fill(voucher);
     await page.locator('#tb_Ledger').fill('');
     await page.locator('#tb_FromDate').fill(from);
@@ -134,7 +134,7 @@ try {
     ]);
     await response.finished();await page.waitForLoadState('domcontentloaded');
     const p=await ready();
-    if(p.filters.from!==from||p.filters.to!==to||p.filters.branch!==branch||p.filters.voucher!==voucher)throw new Error();
+    if(p.filters.from!==from||p.filters.to!==to||p.filters.branch!==branch||p.filters.voucher!==voucher){console.log('FILTER_VALIDATION '+JSON.stringify({fromMatches:p.filters.from===from,toMatches:p.filters.to===to,branchMatches:p.filters.branch===branch,voucherMatches:p.filters.voucher===voucher}));throw new Error();}
     return p;
   }
   async function next(p,number){
