@@ -46,8 +46,10 @@ try {
   await page.goto(LIST, { waitUntil: "domcontentloaded" });
   await page.locator("#tb_FromDate").fill(runDate);
   await page.locator("#tb_ToDate").fill(runDate);
-  await page.locator("#spinner").waitFor({ state: "hidden", timeout: 30000 }).catch(() => {});\n  await page.locator("#d_Search").click({ force: true });
-  await page.locator("#spinner").waitFor({ state: "hidden", timeout: 30000 }).catch(() => {});\n  await page.waitForTimeout(1200);
+  await page.locator("#spinner").waitFor({ state: "hidden", timeout: 30000 }).catch(() => {});
+  await page.locator("#d_Search").click({ force: true });
+  await page.locator("#spinner").waitFor({ state: "hidden", timeout: 30000 }).catch(() => {});
+  await page.waitForTimeout(1200);
 
   const seen = new Set();
   let safety = 0;
