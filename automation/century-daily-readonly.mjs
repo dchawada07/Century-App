@@ -101,6 +101,7 @@ try {
   const target=previousDay();
   const asDisplay=iso=>iso.slice(8,10)+'/'+iso.slice(5,7)+'/'+iso.slice(0,4);
   function parse(p){
+    if((p.rows||[]).some(r=>r.columns===11&&!/^\d+$/.test(r.recordId)))throw new Error();
     return (p.rows||[]).filter(r=>r.columns===11&&/^\d+$/.test(r.recordId)).map(r=>{
       const parts=r.userCell.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
       return {...r,user:parts[0]||'',userDate:strictDate(parts[1]||''),voucherDate:strictDate(r.date)};
@@ -173,7 +174,7 @@ try {
   let filterPages=0,filterComplete=false;
   for(let n=1;n<=10;n++){
     filterPages++;
-    for(const r of parse(p))filtered.set(r.recordId,r);
+    for(const r of parse(p)){if(filtered.has(r.recordId)&&JSON.stringify(filtered.get(r.recordId))!==JSON.stringify(r))throw new Error();filtered.set(r.recordId,r);}
     const forward=p.pager.find(x=>x.text==='>>');
     const more=p.pager.some(x=>x.enabled&&(/^\d+$/.test(x.text)?Number(x.text)>n:x.text==='>>'));
     if(!more){filterComplete=true;break;}
@@ -197,7 +198,7 @@ try {
     for(const r of rows){
       if(!r.userDate)throw new Error();
       if(priorDate&&r.userDate>priorDate)monotone=false;
-      priorDate=r.userDate;recent.set(r.recordId,r);
+      priorDate=r.userDate;if(recent.has(r.recordId)&&JSON.stringify(recent.get(r.recordId))!==JSON.stringify(r))throw new Error();recent.set(r.recordId,r);
     }
     if(rows.length&&rows.every(r=>r.userDate<target))olderPages++;else olderPages=0;
     if(olderPages>=2){boundary=true;break;}
@@ -212,6 +213,7 @@ try {
     authoritativeDatesMonotoneInObservedRows:monotone,targetDayRows:recentTarget.length,
     mismatches:recentTarget.filter(r=>r.voucherDate!==r.userDate).length,targetDayRowsMissingFromDateFilter:missing.length,
     scope:'At most 10 recent pages, stops after two complete older pages; no all-history scan'}));
+  if(!boundary||!monotone||!filterComplete){stage='daily-coverage-incomplete';throw new Error();}
   console.log('Result: READ_ONLY_DAILY_TEST_FINISHED. Coverage is limited to tested filter semantics and observed recent window; no edits or schedule.');
  } catch (err) {
   const errorText=String(err?.message||'');
