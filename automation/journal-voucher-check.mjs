@@ -22,25 +22,28 @@ const context = await browser.newContext({
 const page = await context.newPage();
 
 try {
-  await page.goto(BASE + "/cpanel/Default.aspx", { waitUntil: "domcontentloaded" });
-  const userField = page.locator("#username");
-  const passField = page.locator("#password");
-  if (!await userField.isVisible().catch(() => false)) {
-    // Open the central LOGIN control before filling the credential form.
-    await page.locator("#modalOpen").click({ force: true });
-    await userField.waitFor({ state: "visible", timeout: 10000 });
+  let loggedIn = false;
+  let lastLoginText = "";
+  for (let attempt = 1; attempt <= 3 && !loggedIn; attempt++) {
+    await page.goto(BASE + "/cpanel/Default.aspx", { waitUntil: "domcontentloaded" });
+    const userField = page.locator("#username");
+    const passField = page.locator("#password");
+    if (!await userField.isVisible().catch(() => false)) {
+      await page.locator("#modalOpen").click({ force: true });
+      await userField.waitFor({ state: "visible", timeout: 10000 });
+    }
+    await userField.fill(username);
+    await passField.fill(password);
+    await page.locator("#modalLogin").click({ force: true });
+    await page.waitForTimeout(2000 + attempt * 1000);
+    loggedIn = !page.url().includes("Default.aspx");
+    if (!loggedIn) {
+      lastLoginText = await page.locator("body").innerText().catch(() => "");
+      await page.waitForTimeout(2000);
+    }
   }
-  await userField.fill(username);
-  await passField.fill(password);
-  await page.locator("#modalLogin").click({ force: true });
-  await page.waitForTimeout(1500);
-  await page.waitForURL(url => !url.toString().includes("Default.aspx"), { timeout: 15000 }).catch(async () => {
-    const visibleText = await page.locator("body").innerText().catch(() => "");
-    throw new Error("Century CCPL login did not complete. Visible page text: " + visibleText.slice(0, 1000));
-  });
-  if (page.url().includes("Default.aspx")) {
-    const state = await page.locator("body").innerText().catch(() => "");
-    throw new Error("Century CCPL login did not complete. URL=" + page.url() + " title=" + await page.title() + " text=" + state.slice(0, 1000));
+  if (!loggedIn) {
+    throw new Error("Century CCPL login did not complete after 3 attempts. Visible page text: " + lastLoginText.slice(0, 1000));
   }
 
   await page.goto(LIST, { waitUntil: "domcontentloaded" });
