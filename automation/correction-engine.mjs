@@ -20,6 +20,11 @@ function fieldsEqual(a,b) {
   return JSON.stringify(keys)===JSON.stringify(Object.keys(b).sort()) &&
     keys.every(k=>a[k]===b[k]);
 }
+function completeFields(fields) {
+  if(!fields || typeof fields!=='object' || !fields.voucher || !fields.branch) return false;
+  let lines; try{lines=JSON.parse(fields.ledgerLines);}catch{return false;}
+  return Array.isArray(lines)&&lines.length>0&&lines.every(l=>['ledger','debit','credit','narration','subledger'].every(k=>typeof l[k]==='string'));
+}
 function formMatches(form,row) {
   let u; try {u=new URL(form.url);} catch {return false;}
   const entries=[...u.searchParams];
@@ -27,7 +32,7 @@ function formMatches(form,row) {
     entries.length===1 && entries[0][0]==='Id' && entries[0][1]===row.recordId &&
     form.recordId===row.recordId && form.voucher===row.voucher && form.branch===row.branch &&
     form.date===row.voucherDate && form.dateVisible===true && form.dateEnabled===true &&
-    form.nonDateFields && typeof form.nonDateFields==='object';
+    completeFields(form.nonDateFields);
 }
 /**
  * Adapter contract:
@@ -37,7 +42,10 @@ function formMatches(form,row) {
  * fillDate(ISO): only the Date control; no synthetic full form submission.
  * saveOnce(): one exact observed Save click; transport must independently allow
  * exactly one matching edit POST and reject changed non-date business payload.
- * readBack(id): reload list + reopen same edit URL; return {row,formDate}.
+ * readBack(id): reload list + reopen same edit URL; return {row,formDate,nonDateFields}.
+ * nonDateFields must include voucher, branch and canonical ledgerLines JSON containing
+ * every ledger/debit/credit/narration/subledger; include ALL other business fields too.
+ * reserveIntent key must be account+recordId+target, never mutable expectedDate.
  * No adapter may log details or credentials. All exceptions intentionally sanitized.
  */
 export async function correctOne({candidate,coverage,target,adapter,now=()=>new Date()}) {
@@ -45,17 +53,17 @@ export async function correctOne({candidate,coverage,target,adapter,now=()=>new 
   let saveAttempts=0, stage='PREFLIGHT';
   try {
     if (!coverage || coverage.complete!==true || coverage.monotone!==true ||
-      coverage.crossCheckComplete!==true || coverage.pages<1 || coverage.pages>10 ||
+      coverage.crossCheckComplete!==true || !Number.isInteger(coverage.pages) || coverage.pages<1 || coverage.pages>10 ||
       coverage.scope!=='BOUNDED_RECENT') return result('BLOCKED_COVERAGE');
     if (!isoDate(target) || indiaPreviousDay(now())!==target) return result('BLOCKED_TARGET');
     if (!candidate || !/^\d+$/.test(candidate.recordId||'') ||
       !candidate.voucher || !candidate.branch || !USERS.has(candidate.user) ||
       candidate.userDate!==target || !isoDate(candidate.voucherDate)) return result('BLOCKED_CANDIDATE');
-    if (candidate.voucherDate===target) return result('ALREADY_CORRECT');
     stage='FRESH_ROW';
     const fresh=await adapter.readRow(candidate.recordId);
     if (!fresh || !identity(fresh,candidate) || fresh.voucherDate!==candidate.voucherDate)
       return result('CHANGED_SINCE_SCAN');
+    if (fresh.voucherDate===target) return result('VERIFIED_ALREADY_CORRECT');
     stage='FORM';
     const before=await adapter.openForm(fresh);
     if(!formMatches(before,fresh))return result('BLOCKED_FORM');
@@ -79,6 +87,10 @@ export async function correctOne({candidate,coverage,target,adapter,now=()=>new 
     // Durable private compare-and-set; existing intent MUST be reconciled, not retried.
     if(await adapter.reserveIntent({recordId:fresh.recordId,target,expectedDate:fresh.voucherDate})!==true)
       return result('BLOCKED_EXISTING_INTENT');
+    if(indiaPreviousDay(now())!==target)return result('BLOCKED_DAY_ROLLOVER');
+    const commitRow=await adapter.readRow(candidate.recordId);
+    if(!commitRow || !identity(commitRow,fresh) || commitRow.voucherDate!==fresh.voucherDate)
+      return result('CHANGED_BEFORE_SAVE');
     if(indiaPreviousDay(now())!==target)return result('BLOCKED_DAY_ROLLOVER');
     stage='SAVE';
     saveAttempts=1; // Count attempted click even if it throws. Never retry.
