@@ -189,8 +189,7 @@ try {
     eligibleRowsOutsideAuthoritativeDay:filteredEligible.filter(r=>r.userDate!==target).length}));
   // Bounded independent recent-entry check, never an all-history scan.
   stage='bounded-recent-check';
-  await page.goto(listUrl,{waitUntil:'domcontentloaded',timeout:60000});
-  p=await ready();
+  p=await query({from:'',to:''});
   const recent=new Map();let recentPages=0,olderPages=0,boundary=false,monotone=true,priorDate=null;
   for(let n=1;n<=10;n++){
     recentPages++;
