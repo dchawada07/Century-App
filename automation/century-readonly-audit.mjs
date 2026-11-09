@@ -6,6 +6,7 @@ const listUrl = origin + '/cpanel/ListJournalVoucher.aspx';
 let stage = 'secrets';
 let browser;
 let partialCounts=null;
+let observedPage=null, expectedPage=null;
 const diagnostics = { blockedRequests: 0, blockedNavigation: 0, loginHttpStatus: null, loginRequestFailed: false, alertShown: false };
 try {
   const username = process.env.CENTURY_USERNAME;
@@ -43,6 +44,7 @@ try {
     return route.continue();
   });
   const page = await context.newPage();
+  observedPage=page;
   page.on('response', response => { if (response.url().split('?')[0] === loginUrl + '/LoginUser') diagnostics.loginHttpStatus = response.status(); });
   page.on('requestfailed', req => { if (req.url().split('?')[0] === loginUrl + '/LoginUser') diagnostics.loginRequestFailed = true; });
   page.on('dialog', async dialog => { diagnostics.alertShown = true; await dialog.dismiss(); });
@@ -192,6 +194,8 @@ try {
     const next=exact||(forward?.enabled?forward:null);
     if(!next)throw new Error();
     stage='pagination';
+    expectedPage=number+1;
+    await page.locator('#spinner').waitFor({state:'hidden',timeout:30000}).catch(()=>{});
     await page.locator('#'+next.id).click();
     await page.waitForLoadState('domcontentloaded');
     try { current=await stable(number+1); }
@@ -207,7 +211,13 @@ try {
     stage='scan';
   }
   }
-} catch {
+ } catch (err) {
+  const errorText=String(err?.message||'');
+  console.log('Failure category: '+(err?.name==='TimeoutError'?'TIMEOUT':/Execution context was destroyed/.test(errorText)?'NAVIGATION_RACE':'VALIDATION'));
+  if(observedPage){
+    const pager=await observedPage.locator('a[id^="rpt_Pager"]').evaluateAll(es=>es.map(e=>({id:e.id,text:e.innerText.trim(),enabled:!!e.getAttribute('href')}))).catch(()=>[]);
+    console.log('PAGINATION_DIAGNOSTICS '+JSON.stringify({expectedPage,pager}));
+  }
   if(partialCounts)console.log('INCOMPLETE_AUDIT_AGGREGATES '+JSON.stringify(partialCounts));
   console.log('Non-sensitive diagnostics: ' + JSON.stringify(diagnostics));
   console.log('Result: FAIL at stage ' + stage + '. No record changes attempted.');
