@@ -14,7 +14,11 @@ const parts = new Intl.DateTimeFormat("en-GB", {
 const runDate = `${parts.day}/${parts.month}/${parts.year}`;
 const log = [];
 const browser = await chromium.launch({ headless: false });
-const context = await browser.newContext({\n  userAgent: "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",\n  viewport: { width: 1365, height: 900 },\n  locale: "en-IN",\n});
+const context = await browser.newContext({
+  userAgent: "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+  viewport: { width: 1365, height: 900 },
+  locale: "en-IN",
+});
 const page = await context.newPage();
 
 try {
@@ -28,12 +32,16 @@ try {
   }
   await userField.fill(username);
   await passField.fill(password);
-  await page.locator("#modalLogin").click({ force: true });\n  await page.waitForTimeout(1500);
+  await page.locator("#modalLogin").click({ force: true });
+  await page.waitForTimeout(1500);
   await page.waitForURL(url => !url.toString().includes("Default.aspx"), { timeout: 15000 }).catch(async () => {
     const visibleText = await page.locator("body").innerText().catch(() => "");
     throw new Error("Century CCPL login did not complete. Visible page text: " + visibleText.slice(0, 1000));
   });
-  if (page.url().includes("Default.aspx")) {\n    const state = await page.locator("body").innerText().catch(() => "");\n    throw new Error("Century CCPL login did not complete. URL=" + page.url() + " title=" + await page.title() + " text=" + state.slice(0, 1000));\n  }
+  if (page.url().includes("Default.aspx")) {
+    const state = await page.locator("body").innerText().catch(() => "");
+    throw new Error("Century CCPL login did not complete. URL=" + page.url() + " title=" + await page.title() + " text=" + state.slice(0, 1000));
+  }
 
   await page.goto(LIST, { waitUntil: "domcontentloaded" });
   await page.locator("#tb_FromDate").fill(runDate);
@@ -46,7 +54,8 @@ try {
   while (safety++ < 100) {
     const rows = await page.locator("#gv_Cashbook tr").evaluateAll(trs => trs.slice(1).map(tr => {
       const c = [...tr.querySelectorAll("td")].map(x => x.innerText.trim());
-      const u = (c[7] || "").split(/\\n/).map(x => x.trim()).filter(Boolean);
+      const u = (c[7] || "").split(/\
+/).map(x => x.trim()).filter(Boolean);
       return { voucher: c[1], voucherDate: c[5], user: u[0] || "", userDate: u[1] || "", href: tr.querySelector('a[title="Edit"],a[href*="AddJournalVoucher"]')?.href || "" };
     }).filter(x => x.voucher));
 
