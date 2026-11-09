@@ -4,7 +4,7 @@ const BASE = "https://centuryccpl.in";
 const LIST = BASE + "/cpanel/ListJournalVoucher.aspx";
 const dryRun = String(process.env.DRY_RUN ?? "true").toLowerCase() !== "false";
 const username = String(process.env.CENTURY_USERNAME ?? "").trim();
-const password = process.env.CENTURY_PASSWORD;
+const password = String(process.env.CENTURY_PASSWORD ?? "").trim();
 if (!username || !password) throw new Error("Missing CENTURY_USERNAME or CENTURY_PASSWORD GitHub Secret");
 
 const pad = n => String(n).padStart(2, "0");
