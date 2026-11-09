@@ -28,7 +28,7 @@ jobs:
         env:
           CENTURY_USERNAME: ${{ secrets.CENTURY_USERNAME }}
           CENTURY_PASSWORD: ${{ secrets.CENTURY_PASSWORD }}
-          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run || 'true' }}
+          DRY_RUN: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.dry_run) }}
         run: |
           set -o pipefail
           xvfb-run --auto-servernum --server-args="-screen 0 1365x900x24" node automation/journal-voucher-check.mjs 2>&1 | tee journal-voucher-run.log
