@@ -113,7 +113,7 @@ try {
       headers:table?[...table.querySelectorAll('th')].map(e=>e.innerText.trim()):[],
       rows:table?[...table.querySelectorAll('tr')].filter(tr=>tr.querySelector('td')).map(tr=>{
         const c=[...tr.querySelectorAll('td')].map(e=>e.innerText.trim());
-        return {voucher:c[1]||'',date:c[5]||'',userCell:c[7]||'',columns:c.length};
+        return {recordId:tr.querySelector('input[id^="gv_Cashbook_tb_Id_"]')?.value||'',voucher:c[1]||'',date:c[5]||'',userCell:c[7]||'',columns:c.length};
       }):null
     };
   });
@@ -135,10 +135,10 @@ try {
   stage='scan';
   let firstPass=null;
   for(let pass=1;pass<=2;pass++){
-  const seen=new Map(), pages=new Set();
+  const seen=new Map(), pages=new Set(), voucherNumbers=new Set();
   const exceptions=[]; // Memory only: never print or upload voucher-level records.
   let counts={pages:0,uniqueRows:0,eligibleUsers:0,excludedUsers:0,targetDayRows:0,targetDayMismatches:0,
-    targetDayMatches:0,malformedRows:0,invalidEligibleDates:0,allTimeMismatches:0,duplicateRows:0};
+    targetDayMatches:0,malformedRows:0,invalidEligibleDates:0,allTimeMismatches:0,duplicateRows:0,reusedVoucherNumbers:0};
   partialCounts=counts;
   let current=await stable(1);
   const firstSignature=signature(current);
@@ -146,9 +146,11 @@ try {
     if(current.active!==number||pages.has(number))throw new Error();
     pages.add(number);counts.pages++;
     for(const row of current.rows){
-      if(row.columns!==11||!/^[A-Z]+-\d+$/.test(row.voucher)){counts.malformedRows++;continue;}
-      if(seen.has(row.voucher)){counts.duplicateRows++;throw new Error();}
-      seen.set(row.voucher,JSON.stringify(row));counts.uniqueRows++;
+      if(row.columns!==11||!/^\d+$/.test(row.recordId)||!/^[A-Z]+-\d+$/.test(row.voucher)){counts.malformedRows++;continue;}
+      if(seen.has(row.recordId)){counts.duplicateRows++;if(seen.get(row.recordId)!==JSON.stringify(row)){stage='conflicting-record';throw new Error();}continue;}
+      if(voucherNumbers.has(row.voucher))counts.reusedVoucherNumbers++;
+      voucherNumbers.add(row.voucher);
+      seen.set(row.recordId,JSON.stringify(row));counts.uniqueRows++;
       const parts=row.userCell.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
       const user=parts[0]||'';
       if(!user){counts.malformedRows++;continue;}
@@ -179,7 +181,7 @@ try {
       await page.waitForLoadState('domcontentloaded');
       const first=await stable(1);
       if(signature(first)!==firstSignature)throw new Error();
-      if(counts.malformedRows||counts.invalidEligibleDates||counts.duplicateRows)throw new Error();
+      if(counts.malformedRows||counts.invalidEligibleDates)throw new Error();
       const snapshot=JSON.stringify([...seen.entries()].sort((a,b)=>a[0].localeCompare(b[0])));
       if(pass===1){firstPass=snapshot;console.log('First all-page pass complete; independently repeating full scan.');break;}
       if(snapshot!==firstPass){stage='cross-pass-instability';throw new Error();}
