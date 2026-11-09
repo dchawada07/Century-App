@@ -1,0 +1,31 @@
+name: Century daily read-only test
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: century-daily-readonly
+  cancel-in-progress: false
+jobs:
+  readonly-test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install isolated pinned browser dependency
+        run: |
+          mkdir -p "${RUNNER_TEMP}/century-readonly-test"
+          cp automation/century-daily-readonly.mjs "${RUNNER_TEMP}/century-readonly-test/test.mjs"
+          cd "${RUNNER_TEMP}/century-readonly-test"
+          npm install --ignore-scripts --no-audit --no-fund playwright@1.56.1
+          npx playwright install --with-deps chromium
+      - name: Fresh login and read-only list check
+        env:
+          CENTURY_USERNAME: ${{ secrets.CENTURY_USERNAME }}
+          CENTURY_PASSWORD: ${{ secrets.CENTURY_PASSWORD }}
+        run: node "${RUNNER_TEMP}/century-readonly-test/test.mjs"
