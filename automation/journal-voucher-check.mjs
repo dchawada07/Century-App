@@ -46,7 +46,8 @@ try {
     throw new Error("Century CCPL login did not complete after 3 attempts. Visible page text: " + lastLoginText.slice(0, 1000));
   }
 
-  await page.goto(LIST, { waitUntil: "domcontentloaded" });
+  await page.goto(LIST, { waitUntil: "commit", timeout: 60000 });
+  await page.waitForLoadState("domcontentloaded", { timeout: 60000 }).catch(() => {});
   await page.locator("#tb_FromDate").fill(runDate);
   await page.locator("#tb_ToDate").fill(runDate);
   await page.locator("#spinner").waitFor({ state: "hidden", timeout: 30000 }).catch(() => {});
